@@ -400,10 +400,38 @@ module Rack
 
       # 4.  Obtaining an Access Token
       def respond_with_access_token(request, logger)
-        return [405, { "Content-Type"=>"application/json" }, ["POST only"]] unless request.post?
+        #return [405, { "Content-Type"=>"application/json" }, ["POST only"]] unless request.post?
         # 4.2.  Access Token Response
         begin
           client = get_client(request)
+
+          case request.GET["grant_type"]
+          when "assertion"
+            # 4.1.3. Assertion
+            requested_scope = request.GET["scope"] ? Utils.normalize_scope(request.GET["scope"]) : client.scope
+            assertion_type, assertion = request.GET.values_at("assertion_type", "assertion")
+            raise InvalidGrantError, "Missing assertion_type/assertion" unless assertion_type && assertion
+            # TODO: Add other supported assertion types (i.e. SAML) here
+            if assertion_type == "urn:ietf:params:oauth:grant-type:jwt-bearer"
+              identity = process_jwt_assertion(assertion)
+              access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
+            elsif options.assertion_handler[assertion_type]
+              args = [client, assertion, requested_scope]
+              identity = options.assertion_handler[assertion_type].call(*args)
+              raise InvalidGrantError, "Unknown assertion for #{assertion_type}" unless identity
+              access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
+            else
+              raise InvalidGrantError, "Unsupported assertion_type" if assertion_type != "urn:ietf:params:oauth:grant-type:jwt-bearer"
+            end
+            logger.info "RO2S: Access token #{access_token.token} granted to client #{client.display_name}, identity #{access_token.identity}" if logger
+            response = { :access_token=>access_token.token }
+            response[:scope] = access_token.scope.join(" ")
+            json_response = response.to_json
+            json_response = "#{request.GET['callback']}("+json_response+");" if request.GET['callback']
+            logger.debug("assertion\json_response = #{json_response}")
+            return [200, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, [json_response]]
+          end
+
           case request.POST["grant_type"]
           when "none"
             # 4.1 "none" access grant type (i.e. two-legged OAuth flow)
