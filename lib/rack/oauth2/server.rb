@@ -428,7 +428,7 @@ module Rack
             response[:scope] = access_token.scope.join(" ")
             json_response = response.to_json
             json_response = "#{request.GET['callback']}("+json_response+");" if request.GET['callback']
-            logger.debug("assertion\json_response = #{json_response}")
+            logger.info("assertion\njson_response = #{json_response}")
             return [200, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, [json_response]]
           end
 
