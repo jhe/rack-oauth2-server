@@ -407,17 +407,14 @@ module Rack
 
           case request.GET["grant_type"]
           when "assertion"
-            # 4.1.3. Assertion
             requested_scope = request.GET["scope"] ? Utils.normalize_scope(request.GET["scope"]) : client.scope
             assertion_type, assertion = request.GET.values_at("assertion_type", "assertion")
             raise InvalidGrantError, "Missing assertion_type/assertion" unless assertion_type && assertion
-            # TODO: Add other supported assertion types (i.e. SAML) here
-            if assertion_type == "urn:ietf:params:oauth:grant-type:jwt-bearer"
-              identity = process_jwt_assertion(assertion)
-              access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
-            elsif options.assertion_handler[assertion_type]
+            if options.assertion_handler[assertion_type]
               args = [client, assertion, requested_scope]
+              logger.debug('calling assertion handler')
               identity = options.assertion_handler[assertion_type].call(*args)
+              logger.debug('finished calling assertion handler')
               raise InvalidGrantError, "Unknown assertion for #{assertion_type}" unless identity
               access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
             else
