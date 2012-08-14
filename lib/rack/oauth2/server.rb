@@ -405,28 +405,37 @@ module Rack
         begin
           client = get_client(request)
 
+          # for jsonp
           case request.GET["grant_type"]
           when "assertion"
             requested_scope = request.GET["scope"] ? Utils.normalize_scope(request.GET["scope"]) : client.scope
             assertion_type, assertion = request.GET.values_at("assertion_type", "assertion")
-            raise InvalidGrantError, "Missing assertion_type/assertion" unless assertion_type && assertion
-            if options.assertion_handler[assertion_type]
-              args = [client, assertion, requested_scope]
-              logger.debug('calling assertion handler')
-              identity = options.assertion_handler[assertion_type].call(*args)
-              logger.debug('finished calling assertion handler')
-              raise InvalidGrantError, "Unknown assertion for #{assertion_type}" unless identity
-              access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
-            else
-              raise InvalidGrantError, "Unsupported assertion_type" if assertion_type != "urn:ietf:params:oauth:grant-type:jwt-bearer"
+            begin
+              raise InvalidGrantError, "Missing assertion_type/assertion" unless assertion_type && assertion
+              if options.assertion_handler[assertion_type]
+                args = [client, assertion, requested_scope]
+                logger.debug('calling assertion handler')
+                identity = options.assertion_handler[assertion_type].call(*args)
+                logger.debug('finished calling assertion handler')
+                raise InvalidGrantError, "Unknown assertion for #{assertion_type}" unless identity
+                access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
+              else
+                raise InvalidGrantError, "Unsupported assertion_type" if assertion_type != "urn:ietf:params:oauth:grant-type:jwt-bearer"
+              end
+              logger.info "RO2S: Access token #{access_token.token} granted to client #{client.display_name}, identity #{access_token.identity}" if logger
+              response = { :access_token=>access_token.token }
+              response[:scope] = access_token.scope.join(" ")
+              json_response = response.to_json
+              json_response = "#{request.GET['callback']}("+json_response+");" if request.GET['callback']
+              logger.info("assertion\njson_response = #{json_response}")
+              return [200, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, [json_response]]
+            rescue InvalidGrantError => ige
+              e = {:error => {:name => 'InvalidGrantError', :description => ex.to_s}}
+              return [200, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, [e.to_json]]
+            rescue InvalidGrantError => ige
+              e = {:error => {:name => 'InvalidGrantError', :description => ex.to_s}}
+              return [200, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, [e.to_json]]
             end
-            logger.info "RO2S: Access token #{access_token.token} granted to client #{client.display_name}, identity #{access_token.identity}" if logger
-            response = { :access_token=>access_token.token }
-            response[:scope] = access_token.scope.join(" ")
-            json_response = response.to_json
-            json_response = "#{request.GET['callback']}("+json_response+");" if request.GET['callback']
-            logger.info("assertion\njson_response = #{json_response}")
-            return [200, { "Content-Type"=>"application/json", "Cache-Control"=>"no-store" }, [json_response]]
           end
 
           case request.POST["grant_type"]
