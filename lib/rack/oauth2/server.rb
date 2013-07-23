@@ -501,9 +501,9 @@ module Rack
       # InvalidClientError if client doesn't exist or secret doesn't match.
       def get_client(request, options={})
         # 2.1  Client Password Credentials
-        if request.headers['OAuth-Secret']
-          client_id = request.headers['OAuth-ClientId']
-          client_secret = request.headers['OAuth-Secret']
+        if request.env['HTTP_X_OAUTH_SECRET']
+          client_id = request.env['HTTP_X_OAUTH_CLIENT']
+          client_secret = request.env['HTTP_X_OAUTH_SECRET']
         elsif request.basic?
           client_id, client_secret = request.credentials
         elsif request.post?

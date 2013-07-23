@@ -593,7 +593,26 @@ $ curl -i  http://localhost:3000/oauth/access_token \
     -F assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer \
     -F assertion=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vd3d3LnNvbWVjb21wYW55LmNvbSIsImF1ZCI6Imh0dHA6Ly93d3cubXljb21wYW55LmNvbSIsInBybiI6IjEyMzQ1Njc4OTAifQ.bDrcogybtJ9n5d2a971Q72ye7GN64u7WXmr2OLxSeyc
 ```
+## OAuth 2.0 With Headers
+Instead of passing client_id and client_secret in the request params you
+may add them to the header instead.  Just set
 
+`HTTP_X_OAUTH_SECRET`
+`HTTP_X_OAUTH_CLIENT`
+
+Here's a sample nginx config being used to send ajax requests.  It's
+probably not ideal but works better than sending the ajax request to the
+rails app and having that make a server call to the api.  
+
+  location /gkapi/ {
+    proxy_pass http://localapi.gerberkawasaki.com/;
+    proxy_set_header X-Real-IP  $remote_addr;
+    proxy_set_header User-Agent 'MyWebApp Ajax';
+    proxy_set_header X-OAUTH-CLIENT 'your_client_id';
+    proxy_set_header X-OAUTH-SECRET 'your_client_secret';
+  }
+
+This will also work fine for iOS, Android, and CURL.
 
 ## Methods You'll Want To Use From Your App
 
