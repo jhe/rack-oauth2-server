@@ -61,6 +61,12 @@ module Rack
         def oauth_required
           head oauth.no_access! unless oauth.authenticated?
         end
+
+        # Filter that denies access if the request headers to not contain a 
+        # valid client id and secrete
+        def oauth_client_required
+          head oauth.no_access! unless oauth.client
+        end
       end
 
       # Filter methods available in controller.
@@ -87,6 +93,13 @@ module Rack
           end
         end
       end
+
+        # Adds before filter to require a valid client on all the listed paths.
+        #
+        # @param [Hash] options Accepts before_filter options like :only and :except.
+        def oauth_client_required(options = {})
+          before_filter :oauth_client_required, options
+        end
 
       # Configuration methods available in config/environment.rb.
       module Configuration
