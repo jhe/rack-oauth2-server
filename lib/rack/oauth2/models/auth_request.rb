@@ -9,9 +9,9 @@ module Rack
         class << self
           # Find AuthRequest from identifier.
           def find(request_id)
-            id = BSON::ObjectId(request_id.to_s)
-            Server.new_instance self, collection.find_one(id)
-          rescue BSON::InvalidObjectId
+            id = BSON::ObjectId.mongoize(request_id.to_s)
+            Server.new_instance self, collection.find(id)
+          rescue Moped::Errors::InvalidObjectId
           end
 
           # Create a new authorization request. This holds state, so in addition
@@ -66,11 +66,11 @@ module Rack
           if response_type == "code" # Requested authorization code
             access_grant = AccessGrant.create(identity, client, scope, redirect_uri)
             self.grant_code = access_grant.code
-            self.class.collection.update({ :_id=>id, :revoked=>nil }, { :$set=>{ :grant_code=>access_grant.code, :authorized_at=>authorized_at } })
+            self.class.collection.find({ :_id=>id, :revoked=>nil }).update({ :$set=>{ :grant_code=>access_grant.code, :authorized_at=>authorized_at } })
           else # Requested access token
             access_token = AccessToken.get_token_for(identity, client, scope, expires_in)
             self.access_token = access_token.token
-            self.class.collection.update({ :_id=>id, :revoked=>nil, :access_token=>nil }, { :$set=>{ :access_token=>access_token.token, :authorized_at=>authorized_at } })
+            self.class.collection.find({ :_id=>id, :revoked=>nil, :access_token=>nil }).update({ :$set=>{ :access_token=>access_token.token, :authorized_at=>authorized_at } })
           end
           true
         end
@@ -78,7 +78,7 @@ module Rack
         # Deny access.
         def deny!
           self.authorized_at = Time.now.to_i
-          self.class.collection.update({ :_id=>id }, { :$set=>{ :authorized_at=>authorized_at } })
+          self.class.collection.find({ :_id=>id }).update({ :$set=>{ :authorized_at=>authorized_at } })
         end
 
         Server.create_indexes do

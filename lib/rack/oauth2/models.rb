@@ -10,11 +10,19 @@ module Rack
       class << self
         # Create new instance of the klass and populate its attributes.
         def new_instance(klass, fields)
+          ::Rails::Railtie::Rails.logger.debug "new_instance"
+          ::Rails::Railtie::Rails.logger.debug "1. fields = "+fields.inspect.to_s
           return unless fields
           instance = klass.new
+          ::Rails::Railtie::Rails.logger.debug "klass = "+klass.inspect.to_s
+          fields = fields.first if fields.kind_of? Moped::Query
+          ::Rails::Railtie::Rails.logger.debug "2. fields = "+fields.inspect.to_s
+          return if fields.nil?
           fields.each do |name, value|
+            ::Rails::Railtie::Rails.logger.debug "name = "+name.to_s
             instance.instance_variable_set :"@#{name}", value
           end
+          ::Rails::Railtie::Rails.logger.debug "instance = "+instance.to_s
           instance
         end
 
@@ -40,7 +48,7 @@ module Rack
         def database
           @database ||= Server.options.database
           raise "No database Configured. You must configure it using Server.options.database = Mongo::Connection.new()[db_name]" unless @database
-          raise "You set Server.database to #{Server.database.class}, should be a Mongo::DB object" unless Mongo::DB === @database
+          #raise "You set Server.database to #{Server.database.class}, should be a Mongo::DB object" unless Mongo::DB === @database
           @database
         end
       end

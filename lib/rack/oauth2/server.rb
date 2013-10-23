@@ -458,6 +458,7 @@ module Rack
             raise InvalidGrantError, "Username/password do not match" unless identity
             access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
           when "assertion"
+            logger.debug "**********************************************************************************************"
             # 4.1.3. Assertion
             requested_scope = request.POST["scope"] ? Utils.normalize_scope(request.POST["scope"]) : client.scope
             assertion_type, assertion = request.POST.values_at("assertion_type", "assertion")
@@ -467,13 +468,17 @@ module Rack
               identity = process_jwt_assertion(assertion)
               access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
             elsif options.assertion_handler[assertion_type]
+              logger.debug "options.assertion_handler[assertion_type]"
               args = [client, assertion, requested_scope]
               identity = options.assertion_handler[assertion_type].call(*args)
+              logger.debug "identity = "+identity.to_s
               raise InvalidGrantError, "Unknown assertion for #{assertion_type}" unless identity
               access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
+              logger.debug "access_token = "+access_token.to_s
             else
               raise InvalidGrantError, "Unsupported assertion_type" if assertion_type != "urn:ietf:params:oauth:grant-type:jwt-bearer"
             end
+            logger.debug "**********************************************************************************************"
           else
             raise UnsupportedGrantType
           end
@@ -518,7 +523,7 @@ module Rack
         end
         raise InvalidClientError if client.revoked
         return client
-      rescue BSON::InvalidObjectId
+      rescue Moped::Errors::InvalidObjectId
         raise InvalidClientError
       end
 
