@@ -19,7 +19,6 @@ module Rack
           # You can set optional expiration in seconds. If zero or nil, token
           # never expires.
           def get_token_for(identity, client, scope, expires = nil)
-            ::Rails::Railtie::Rails.logger.debug "get_token_for"
             raise ArgumentError, "Identity must be String or Integer" unless String === identity || Integer === identity
             scope = Utils.normalize_scope(scope) & client.scope # Only allowed scope
 
@@ -28,10 +27,7 @@ module Rack
               :identity=>identity, :scope=>scope,
               :client_id=>client.id, :revoked=>nil}).first
 
-            ::Rails::Railtie::Rails.logger.debug "token = "+token.inspect.to_s
-
             unless token
-              ::Rails::Railtie::Rails.logger.debug "no token"
               return create_token_for(client, scope, identity, expires)
             end
             Server.new_instance self, token
@@ -39,10 +35,6 @@ module Rack
 
           # Creates a new AccessToken for the given client and scope.
           def create_token_for(client, scope, identity = nil, expires = nil)
-            ::Rails::Railtie::Rails.logger.debug "create_token_for"
-            ::Rails::Railtie::Rails.logger.debug "client = "+client.to_s
-            ::Rails::Railtie::Rails.logger.debug "scope = "+scope.to_s
-            ::Rails::Railtie::Rails.logger.debug "identity = "+identity.to_s
             expires_at = Time.now.to_i + expires if expires && expires != 0
             token = { :_id=>Server.secure_random, 
                       :scope=>scope,
@@ -51,10 +43,8 @@ module Rack
                       :expires_at=>expires_at, 
                       :revoked=>nil }
             token[:identity] = identity if identity
-            ::Rails::Railtie::Rails.logger.debug "1. token = "+token.inspect.to_s
             collection.insert token
             Client.collection.find({ :_id=>client.id }).update({ :$inc=>{ :tokens_granted=>1 } }).first
-            ::Rails::Railtie::Rails.logger.debug "2. token = "+token.inspect.to_s
             Server.new_instance self, token
           end
 
