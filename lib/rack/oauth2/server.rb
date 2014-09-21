@@ -408,6 +408,7 @@ module Rack
           # for jsonp
           case request.GET["grant_type"]
           when "assertion"
+            request.session.clear
             requested_scope = request.GET["scope"] ? Utils.normalize_scope(request.GET["scope"]) : client.scope
             assertion_type, assertion = request.GET.values_at("assertion_type", "assertion")
             raise InvalidGrantError, "Missing assertion_type/assertion" unless assertion_type && assertion
@@ -459,6 +460,7 @@ module Rack
             access_token = AccessToken.get_token_for(identity, client, requested_scope, options.expires_in)
           when "assertion"
             logger.debug "**********************************************************************************************"
+            request.session.clear
             # 4.1.3. Assertion
             requested_scope = request.POST["scope"] ? Utils.normalize_scope(request.POST["scope"]) : client.scope
             assertion_type, assertion = request.POST.values_at("assertion_type", "assertion")
