@@ -482,6 +482,10 @@ module Rack
             end
             logger.debug "**********************************************************************************************"
           else
+            logger.info "**********************************************************************************************"
+            logger.error "missing assertion type"
+            logger.error request.inspect.to_s
+            logger.info "**********************************************************************************************"
             raise UnsupportedGrantType
           end
           logger.info "RO2S: Access token #{access_token.token} granted to client #{client.display_name}, identity #{access_token.identity}" if logger
