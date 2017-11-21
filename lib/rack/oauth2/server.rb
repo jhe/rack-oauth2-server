@@ -484,12 +484,14 @@ module Rack
           else
             logger.info "**********************************************************************************************"
             logger.error "missing assertion type"
-            logger.error 'request["GET"].inspect.to_s = '
-            logger.error request["GET"].inspect.to_s
-            logger.error 'request["POST"].inspect.to_s = '
-            logger.error request["POST"].inspect.to_s
-            logger.error 'request["RAW_POST_DATA"].inspect.to_s = '
-            logger.error request["RAW_POST_DATA"].inspect.to_s
+            logger.error 'request.GET.inspect.to_s = '
+            logger.error request.GET.inspect.to_s
+            logger.error 'request.POST.inspect.to_s = '
+            logger.error request.POST.inspect.to_s
+            logger.error 'request.query_string.to_s = '
+            logger.error request.query_string.to_s
+            logger.error 'request.body.inspect.to_s = '
+            logger.error request.body.inspect.to_s
             logger.info "**********************************************************************************************"
             raise UnsupportedGrantType
           end
